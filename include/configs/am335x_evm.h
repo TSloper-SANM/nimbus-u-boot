@@ -60,7 +60,7 @@
 #define BOOTENV_DEV_LEGACY_MMC(devtypeu, devtypel, instance) \
 	"bootcmd_" #devtypel #instance "=" \
 	"setenv mmcdev " #instance"; "\
-	"setenv bootpart " #instance":2 ; "\
+	"setenv bootpart " #instance":1 ; "\
 	"run mmcboot\0"
 
 #define BOOTENV_DEV_NAME_LEGACY_MMC(devtypeu, devtypel, instance) \
@@ -74,12 +74,7 @@
 	#devtypel #instance " "
 
 #define BOOT_TARGET_DEVICES(func) \
-	func(MMC, mmc, 0) \
 	func(LEGACY_MMC, legacy_mmc, 0) \
-	func(MMC, mmc, 1) \
-	func(LEGACY_MMC, legacy_mmc, 1) \
-	func(NAND, nand, 0) \
-	func(PXE, pxe, na) \
 	func(DHCP, dhcp, na)
 
 #include <config_distro_bootcmd.h>
@@ -92,7 +87,7 @@
 	DEFAULT_LINUX_BOOT_ENV \
 	DEFAULT_MMC_TI_ARGS \
 	DEFAULT_FIT_TI_ARGS \
-	"bootpart=0:2\0" \
+	"bootpart=0:1\0" \
 	"bootdir=/boot\0" \
 	"bootfile=zImage\0" \
 	"fdtfile=undefined\0" \
@@ -144,6 +139,8 @@
 			"setenv fdtfile am335x-evmsk.dtb; fi; " \
 		"if test $board_name = A335_ICE; then " \
 			"setenv fdtfile am335x-icev2.dtb; fi; " \
+		"if test $board_name = A335NIMBUS; then " \
+			"setenv fdtfile am335x-nimbus.dtb; fi; " \
 		"if test $fdtfile = undefined; then " \
 			"echo WARNING: Could not determine device tree to use; fi; \0" \
 	"init_console=" \
