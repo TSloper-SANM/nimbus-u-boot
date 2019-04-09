@@ -28,6 +28,6 @@ Example: $ git checkout nimbus-002
 $ export CC="/opt/gcc-linaro-6.3.1-2017.05-x86_64_arm-linux-gnueabihf/bin/arm-linu
 x-gnueabihf-"
 
-$ ./make ARCH=arm CROSS_COMPILE=${CC} am335x_nimbus_defconfig
+$ make ARCH=arm CROSS_COMPILE=${CC} am335x_nimbus_defconfig
 
-$ ./make ARCH=arm CROSS_COMPILE=${CC}
+$ make ARCH=arm CROSS_COMPILE=${CC}
