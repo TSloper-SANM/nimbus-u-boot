@@ -53,6 +53,10 @@ DECLARE_GLOBAL_DATA_PTR;
 #define GPIO_ETH0_MODE		GPIO_TO_PIN(0, 11)
 #define GPIO_ETH1_MODE		GPIO_TO_PIN(1, 26)
 
+/* NIMBUS LED GPIO */
+#define GPIO_LD2				GPIO_TO_PIN(2, 4)
+#define GPIO_LD3				GPIO_TO_PIN(2, 3)
+
 static struct ctrl_dev *cdev = (struct ctrl_dev *)CTRL_DEVICE_BASE;
 
 #define GPIO0_RISINGDETECT	(AM33XX_GPIO0_BASE + OMAP_GPIO_RISINGDETECT)
@@ -151,6 +155,13 @@ static const struct ddr_data ddr3_icev2_data = {
 	.datawrsratio0 = MT41J128MJT125_PHY_WR_DATA_400MHz,
 };
 
+static const struct ddr_data ddr3_nimbus_data = {
+	.datardsratio0 = AS4C256M16D3LB12BCN_RD_DQS,
+	.datawdsratio0 = AS4C256M16D3LB12BCN_WR_DQS,
+	.datafwsratio0 = AS4C256M16D3LB12BCN_PHY_FIFO_WE,
+	.datawrsratio0 = AS4C256M16D3LB12BCN_PHY_WR_DATA,
+};
+
 static const struct cmd_control ddr3_cmd_ctrl_data = {
 	.cmd0csratio = MT41J128MJT125_RATIO,
 	.cmd0iclkout = MT41J128MJT125_INVERT_CLKOUT,
@@ -195,6 +206,17 @@ static const struct cmd_control ddr3_icev2_cmd_ctrl_data = {
 	.cmd2iclkout = MT41J128MJT125_INVERT_CLKOUT_400MHz,
 };
 
+static const struct cmd_control ddr3_nimbus_cmd_ctrl_data = {
+	.cmd0csratio = AS4C256M16D3LB12BCN_RATIO,
+	.cmd0iclkout = AS4C256M16D3LB12BCN_INVERT_CLKOUT,
+
+	.cmd1csratio = AS4C256M16D3LB12BCN_RATIO,
+	.cmd1iclkout = AS4C256M16D3LB12BCN_INVERT_CLKOUT,
+
+	.cmd2csratio = AS4C256M16D3LB12BCN_RATIO,
+	.cmd2iclkout = AS4C256M16D3LB12BCN_INVERT_CLKOUT,
+};
+
 static struct emif_regs ddr3_emif_reg_data = {
 	.sdram_config = MT41J128MJT125_EMIF_SDCFG,
 	.ref_ctrl = MT41J128MJT125_EMIF_SDREF,
@@ -226,6 +248,18 @@ static struct emif_regs ddr3_evm_emif_reg_data = {
 	.ocp_config = EMIF_OCP_CONFIG_AM335X_EVM,
 	.zq_config = MT41J512M8RH125_ZQ_CFG,
 	.emif_ddr_phy_ctlr_1 = MT41J512M8RH125_EMIF_READ_LATENCY |
+				PHY_EN_DYN_PWRDN,
+};
+
+static struct emif_regs ddr3_nimbus_emif_reg_data = {
+	.sdram_config = AS4C256M16D3LB12BCN_EMIF_SDCFG,
+	.ref_ctrl = AS4C256M16D3LB12BCN_EMIF_SDREF,
+	.sdram_tim1 = AS4C256M16D3LB12BCN_EMIF_TIM1,
+	.sdram_tim2 = AS4C256M16D3LB12BCN_EMIF_TIM2,
+	.sdram_tim3 = AS4C256M16D3LB12BCN_EMIF_TIM3,
+	.ocp_config = EMIF_OCP_CONFIG_AM335X_EVM,
+	.zq_config = AS4C256M16D3LB12BCN_ZQ_CFG,
+	.emif_ddr_phy_ctlr_1 = AS4C256M16D3LB12BCN_EMIF_READ_LATENCY |
 				PHY_EN_DYN_PWRDN,
 };
 
@@ -267,6 +301,8 @@ const struct dpll_params *get_dpll_ddr_params(void)
 	else if (board_is_bone_lt() || board_is_icev2())
 		return &dpll_ddr3_400MHz[ind];
 	else if (board_is_evm_15_or_later())
+		return &dpll_ddr3_303MHz[ind];
+	else if (board_is_nimbus())
 		return &dpll_ddr3_303MHz[ind];
 	else
 		return &dpll_ddr2_266MHz[ind];
@@ -523,6 +559,14 @@ const struct ctrl_ioregs ioregs = {
 	.dt1ioctl		= MT47H128M16RT25E_IOCTRL_VALUE,
 };
 
+const struct ctrl_ioregs ioregs_nimbus = {
+	.cm0ioctl		= AS4C256M16D3LB12BCN_IOCTRL_VALUE,
+	.cm1ioctl		= AS4C256M16D3LB12BCN_IOCTRL_VALUE,
+	.cm2ioctl		= AS4C256M16D3LB12BCN_IOCTRL_VALUE,
+	.dt0ioctl		= AS4C256M16D3LB12BCN_IOCTRL_VALUE,
+	.dt1ioctl		= AS4C256M16D3LB12BCN_IOCTRL_VALUE,
+};
+
 void sdram_init(void)
 {
 	if (board_is_evm_sk()) {
@@ -557,6 +601,9 @@ void sdram_init(void)
 	else if (board_is_gp_evm())
 		config_ddr(266, &ioregs, &ddr2_data,
 			   &ddr2_cmd_ctrl_data, &ddr2_evm_emif_reg_data, 0);
+	else if (board_is_nimbus())
+		config_ddr(303, &ioregs_nimbus, &ddr3_nimbus_data,
+			   &ddr3_nimbus_cmd_ctrl_data, &ddr3_nimbus_emif_reg_data, 0);
 	else
 		config_ddr(266, &ioregs, &ddr2_data,
 			   &ddr2_cmd_ctrl_data, &ddr2_emif_reg_data, 0);
@@ -615,6 +662,16 @@ int board_init(void)
 #if defined(CONFIG_HW_WATCHDOG)
 	hw_watchdog_init();
 #endif
+
+/* Configure NIMBUS GPIO */
+if (board_is_nimbus()) {
+	gpio_request(GPIO_LD2, "gpio_ld2");
+	gpio_request(GPIO_LD3, "gpio_ld3");
+	
+	/* Turn on both LEDs during bootloader phase */
+	gpio_direction_output(GPIO_LD2, 1);
+	gpio_direction_output(GPIO_LD3, 1);
+}
 
 	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
 #if defined(CONFIG_NOR) || defined(CONFIG_NAND)
@@ -724,6 +781,10 @@ int board_late_init(void)
 
 	if (board_is_bbg1())
 		name = "BBG1";
+	
+	if (board_is_nimbus())
+		name = "A335NIMBUS";
+
 	set_board_info_env(name);
 
 	/*
@@ -791,7 +852,7 @@ static struct cpsw_slave_data cpsw_slaves[] = {
 	{
 		.slave_reg_ofs	= 0x308,
 		.sliver_reg_ofs	= 0xdc0,
-		.phy_addr	= 1,
+		.phy_addr	= 7,
 	},
 };
 
@@ -801,7 +862,7 @@ static struct cpsw_platform_data cpsw_data = {
 	.mdio_div		= 0xff,
 	.channels		= 8,
 	.cpdma_reg_ofs		= 0x800,
-	.slaves			= 1,
+	.slaves			= 2,
 	.slave_data		= cpsw_slaves,
 	.ale_reg_ofs		= 0xd00,
 	.ale_entries		= 1024,
@@ -811,6 +872,7 @@ static struct cpsw_platform_data cpsw_data = {
 	.mac_control		= (1 << 5),
 	.control		= cpsw_control,
 	.host_port_num		= 0,
+	.active_slave		= 1,
 	.version		= CPSW_CTRL_VERSION_2,
 };
 #endif
@@ -839,6 +901,7 @@ int board_eth_init(bd_t *bis)
 	(!defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_USBETH_SUPPORT))
 	uint8_t mac_addr[6];
 	uint32_t mac_hi, mac_lo;
+	uint16_t reg;
 
 	/*
 	 * use efuse mac address for USB ethernet as we know that
@@ -870,6 +933,10 @@ int board_eth_init(bd_t *bis)
 		cpsw_slaves[1].phy_if = PHY_INTERFACE_MODE_RMII;
 		cpsw_slaves[0].phy_addr = 1;
 		cpsw_slaves[1].phy_addr = 3;
+	} else if (board_is_nimbus()) {
+		writel(RGMII_MODE_ENABLE, &cdev->miisel);
+		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
+				PHY_INTERFACE_MODE_RGMII;		
 	} else {
 		writel((RGMII_MODE_ENABLE | RGMII_INT_DELAY), &cdev->miisel);
 		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
@@ -904,6 +971,31 @@ int board_eth_init(bd_t *bis)
 		miiphy_write(devname, 0x0, AR8051_PHY_DEBUG_DATA_REG,
 				AR8051_RGMII_TX_CLK_DLY);
 	}
+
+	if (board_is_nimbus()) {
+		const char *devname;
+		devname = miiphy_get_current_dev();
+
+		// delay TX and TX clock lines
+		miiphy_write(devname, 0x0, 0xd, 0x2);
+		miiphy_write(devname, 0x0, 0xe, 0x8);
+		miiphy_write(devname, 0x0, 0xd, 0x4002);
+		miiphy_write(devname, 0x0, 0xe, 0x3ff);
+
+		// disable 1000 Mbps
+		miiphy_read(devname, 0x0, 0x0, &reg);
+		reg &= 0xFFBF;
+		miiphy_write(devname, 0x0, 0x0, reg);
+
+		miiphy_read(devname, 0x0, 0x9, &reg);
+		reg &= 0xFCFF;
+		miiphy_write(devname, 0x0, 0x9, reg);
+
+		miiphy_read(devname, 0x0, 0x0, &reg);
+		reg |= 0x0200;
+		miiphy_write(devname, 0x0, 0x0, reg);
+	}
+
 #endif
 #if defined(CONFIG_USB_ETHER) && \
 	(!defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_USBETH_SUPPORT))

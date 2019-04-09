@@ -158,6 +158,28 @@ static struct module_pin_mux rgmii1_pin_mux[] = {
 	{-1},
 };
 
+static struct module_pin_mux rgmii2_pin_mux[] = {
+	{OFFSET(gpmc_a0), MODE(2)},			/* RGMII1_TCTL */
+	{OFFSET(gpmc_a1), MODE(2) | RXACTIVE},		/* RGMII1_RCTL */
+	{OFFSET(gpmc_a2), MODE(2)},			/* RGMII1_TD3 */
+	{OFFSET(gpmc_a3), MODE(2)},			/* RGMII1_TD2 */
+	{OFFSET(gpmc_a4), MODE(2)},			/* RGMII1_TD1 */
+	{OFFSET(gpmc_a5), MODE(2)},			/* RGMII1_TD0 */
+	{OFFSET(gpmc_a6), MODE(2)},			/* RGMII1_TCLK */
+	{OFFSET(gpmc_a7), MODE(2) | RXACTIVE},		/* RGMII1_RCLK */
+	{OFFSET(gpmc_a8), MODE(2) | RXACTIVE},		/* RGMII1_RD3 */
+	{OFFSET(gpmc_a9), MODE(2) | RXACTIVE},		/* RGMII1_RD2 */
+	{OFFSET(gpmc_a10), MODE(2) | RXACTIVE},		/* RGMII1_RD1 */
+	{OFFSET(gpmc_a11), MODE(2) | RXACTIVE},		/* RGMII1_RD0 */
+	{-1},
+};
+
+static struct module_pin_mux mdio_pin_mux[] = {
+	{OFFSET(mdio_data), MODE(0) | RXACTIVE | PULLUP_EN},/* MDIO_DATA */
+	{OFFSET(mdio_clk), MODE(0) | PULLUP_EN},	/* MDIO_CLK */
+	{-1},
+};
+
 static struct module_pin_mux mii1_pin_mux[] = {
 	{OFFSET(mii1_rxerr), MODE(0) | RXACTIVE},	/* MII1_RXERR */
 	{OFFSET(mii1_txen), MODE(0)},			/* MII1_TXEN */
@@ -259,6 +281,13 @@ static struct module_pin_mux bone_norcape_pin_mux[] = {
 static struct module_pin_mux uart3_icev2_pin_mux[] = {
 	{OFFSET(mii1_rxd3), (MODE(1) | PULLUP_EN | RXACTIVE)},	/* UART3_RXD */
 	{OFFSET(mii1_rxd2), MODE(1) | PULLUDEN},		/* UART3_TXD */
+	{-1},
+};
+
+static struct module_pin_mux cell_nimbus_pin_mux[] = {
+	{OFFSET(gpmc_wait0), (MODE(7) | PULLDOWN_EN | PULLUDEN | RXACTIVE)},	/* GPIO0_30 */
+	{OFFSET(gpmc_wpn), (MODE(7) | PULLDOWN_EN | PULLUDEN | RXACTIVE)},		/* GPIO0_31 */
+	{OFFSET(gpmc_be1n), (MODE(7) | PULLDOWN_EN | PULLUDEN | RXACTIVE)},		/* GPIO1_28 */	
 	{-1},
 };
 
@@ -396,6 +425,12 @@ void enable_board_pin_mux(void)
 		configure_module_pin_mux(uart3_icev2_pin_mux);
 		configure_module_pin_mux(rmii1_pin_mux);
 		configure_module_pin_mux(spi0_pin_mux);
+	} else if (board_is_nimbus()) {
+		configure_module_pin_mux(mmc0_pin_mux);
+		configure_module_pin_mux(mmc1_pin_mux);
+		configure_module_pin_mux(mdio_pin_mux);
+		configure_module_pin_mux(rgmii2_pin_mux);
+		configure_module_pin_mux(cell_nimbus_pin_mux);		
 	} else {
 		/* Unknown board. We might still be able to boot. */
 		puts("Bad EEPROM or unknown board, cannot configure pinmux.");
