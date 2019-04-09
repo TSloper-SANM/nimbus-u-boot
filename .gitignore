@@ -18,7 +18,7 @@
 *.elf
 *.swp
 *.bin
-*.patch
+# *.patch
 *.cfgtmp
 
 # host programs on Cygwin

@@ -1,0 +1,88 @@
+From 5d8b5ab41a19750df8facf452c98eeada987507e Mon Sep 17 00:00:00 2001
+From: Tim Sloper <tim.sloper@outlook.com>
+Date: Mon, 8 Apr 2019 13:48:11 -0400
+Subject: [PATCH 3/3] Env changes for NIMBUS-002
+
+---
+ include/config_distro_bootcmd.h |  2 +-
+ include/configs/am335x_evm.h    | 11 ++++-------
+ include/environment/ti/mmc.h    |  6 +++---
+ 3 files changed, 8 insertions(+), 11 deletions(-)
+
+diff --git a/include/config_distro_bootcmd.h b/include/config_distro_bootcmd.h
+index 5c469a23fa..1fd5faf747 100644
+--- a/include/config_distro_bootcmd.h
++++ b/include/config_distro_bootcmd.h
+@@ -39,7 +39,7 @@
+ #define BOOTENV_DEV_BLKDEV(devtypeu, devtypel, instance) \
+ 	"bootcmd_" #devtypel #instance "=" \
+ 		"setenv devnum " #instance "; " \
+-		"run " #devtypel "_boot\0"
++		"run " #devtypel "boot\0"
+ 
+ #define BOOTENV_DEV_NAME_BLKDEV(devtypeu, devtypel, instance) \
+ 	#devtypel #instance " "
+diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
+index 856c546fc1..2fa9a7bfc1 100644
+--- a/include/configs/am335x_evm.h
++++ b/include/configs/am335x_evm.h
+@@ -60,7 +60,7 @@
+ #define BOOTENV_DEV_LEGACY_MMC(devtypeu, devtypel, instance) \
+ 	"bootcmd_" #devtypel #instance "=" \
+ 	"setenv mmcdev " #instance"; "\
+-	"setenv bootpart " #instance":2 ; "\
++	"setenv bootpart " #instance":1 ; "\
+ 	"run mmcboot\0"
+ 
+ #define BOOTENV_DEV_NAME_LEGACY_MMC(devtypeu, devtypel, instance) \
+@@ -74,12 +74,7 @@
+ 	#devtypel #instance " "
+ 
+ #define BOOT_TARGET_DEVICES(func) \
+-	func(MMC, mmc, 0) \
+ 	func(LEGACY_MMC, legacy_mmc, 0) \
+-	func(MMC, mmc, 1) \
+-	func(LEGACY_MMC, legacy_mmc, 1) \
+-	func(NAND, nand, 0) \
+-	func(PXE, pxe, na) \
+ 	func(DHCP, dhcp, na)
+ 
+ #include <config_distro_bootcmd.h>
+@@ -92,7 +87,7 @@
+ 	DEFAULT_LINUX_BOOT_ENV \
+ 	DEFAULT_MMC_TI_ARGS \
+ 	DEFAULT_FIT_TI_ARGS \
+-	"bootpart=0:2\0" \
++	"bootpart=0:1\0" \
+ 	"bootdir=/boot\0" \
+ 	"bootfile=zImage\0" \
+ 	"fdtfile=undefined\0" \
+@@ -144,6 +139,8 @@
+ 			"setenv fdtfile am335x-evmsk.dtb; fi; " \
+ 		"if test $board_name = A335_ICE; then " \
+ 			"setenv fdtfile am335x-icev2.dtb; fi; " \
++		"if test $board_name = A335NIMBUS; then " \
++			"setenv fdtfile am335x-nimbus.dtb; fi; " \
+ 		"if test $fdtfile = undefined; then " \
+ 			"echo WARNING: Could not determine device tree to use; fi; \0" \
+ 	"init_console=" \
+diff --git a/include/environment/ti/mmc.h b/include/environment/ti/mmc.h
+index 4305ebdaaf..10ddb090c3 100644
+--- a/include/environment/ti/mmc.h
++++ b/include/environment/ti/mmc.h
+@@ -23,9 +23,9 @@
+ 	"bootenvfile=uEnv.txt\0" \
+ 	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
+ 		"env import -t ${loadaddr} ${filesize}\0" \
+-	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenvfile}\0" \
+-	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+-	"loadfdt=load ${devtype} ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
++	"loadbootenv=load mmc ${mmcdev} ${loadaddr} ${bootdir}/${bootenvfile}\0" \
++	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/vmlinuz-${uname_r}\0" \
++	"loadfdt=load ${devtype} ${bootpart} ${fdtaddr} ${bootdir}/dtbs/${uname_r}/${fdtfile}\0" \
+ 	"envboot=mmc dev ${mmcdev}; " \
+ 		"if mmc rescan; then " \
+ 			"echo SD/MMC found on device ${mmcdev};" \
+-- 
+2.17.1
+

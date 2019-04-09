@@ -1,0 +1,323 @@
+From f31f0e701122eea1bddbf0d1bdd2621d4cd4fb7c Mon Sep 17 00:00:00 2001
+From: Tim Sloper <tim.sloper@outlook.com>
+Date: Mon, 8 Apr 2019 13:45:48 -0400
+Subject: [PATCH 1/3] Low-level changes for NIMBUS-002
+
+---
+ arch/arm/include/asm/arch-am33xx/ddr_defs.h | 16 ++++
+ board/ti/am335x/board.c                     | 96 ++++++++++++++++++++-
+ board/ti/am335x/board.h                     |  5 ++
+ board/ti/am335x/mux.c                       | 35 ++++++++
+ 4 files changed, 150 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-am33xx/ddr_defs.h b/arch/arm/include/asm/arch-am33xx/ddr_defs.h
+index a97ebb557b..73622cea2e 100644
+--- a/arch/arm/include/asm/arch-am33xx/ddr_defs.h
++++ b/arch/arm/include/asm/arch-am33xx/ddr_defs.h
+@@ -155,6 +155,22 @@
+ #define K4B2G1646EBIH9_PHY_WR_DATA		0x76
+ #define K4B2G1646EBIH9_IOCTRL_VALUE		0x18B
+ 
++/* Alliance Memory AS4C256M16D3LB-12BCN */
++#define AS4C256M16D3LB12BCN_EMIF_READ_LATENCY	0x06
++#define AS4C256M16D3LB12BCN_EMIF_TIM1		0x0888A39B
++#define AS4C256M16D3LB12BCN_EMIF_TIM2		0x28517FDA
++#define AS4C256M16D3LB12BCN_EMIF_TIM3		0x501F84EF
++#define AS4C256M16D3LB12BCN_EMIF_SDCFG		0x61C04BB2
++#define AS4C256M16D3LB12BCN_EMIF_SDREF		0x0000093B
++#define AS4C256M16D3LB12BCN_ZQ_CFG			0x50074BE4
++#define AS4C256M16D3LB12BCN_RATIO			0x100
++#define AS4C256M16D3LB12BCN_INVERT_CLKOUT		0x1
++#define AS4C256M16D3LB12BCN_RD_DQS			0x23
++#define AS4C256M16D3LB12BCN_WR_DQS			0x80
++#define AS4C256M16D3LB12BCN_PHY_FIFO_WE		0xEC
++#define AS4C256M16D3LB12BCN_PHY_WR_DATA		0xBE
++#define AS4C256M16D3LB12BCN_IOCTRL_VALUE		0x18B
++
+ #define  LPDDR2_ADDRCTRL_IOCTRL_VALUE   0x294
+ #define  LPDDR2_ADDRCTRL_WD0_IOCTRL_VALUE 0x00000000
+ #define  LPDDR2_ADDRCTRL_WD1_IOCTRL_VALUE 0x00000000
+diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
+index 1a52bffc00..c598841c6b 100644
+--- a/board/ti/am335x/board.c
++++ b/board/ti/am335x/board.c
+@@ -53,6 +53,10 @@ DECLARE_GLOBAL_DATA_PTR;
+ #define GPIO_ETH0_MODE		GPIO_TO_PIN(0, 11)
+ #define GPIO_ETH1_MODE		GPIO_TO_PIN(1, 26)
+ 
++/* NIMBUS LED GPIO */
++#define GPIO_LD2				GPIO_TO_PIN(2, 4)
++#define GPIO_LD3				GPIO_TO_PIN(2, 3)
++
+ static struct ctrl_dev *cdev = (struct ctrl_dev *)CTRL_DEVICE_BASE;
+ 
+ #define GPIO0_RISINGDETECT	(AM33XX_GPIO0_BASE + OMAP_GPIO_RISINGDETECT)
+@@ -151,6 +155,13 @@ static const struct ddr_data ddr3_icev2_data = {
+ 	.datawrsratio0 = MT41J128MJT125_PHY_WR_DATA_400MHz,
+ };
+ 
++static const struct ddr_data ddr3_nimbus_data = {
++	.datardsratio0 = AS4C256M16D3LB12BCN_RD_DQS,
++	.datawdsratio0 = AS4C256M16D3LB12BCN_WR_DQS,
++	.datafwsratio0 = AS4C256M16D3LB12BCN_PHY_FIFO_WE,
++	.datawrsratio0 = AS4C256M16D3LB12BCN_PHY_WR_DATA,
++};
++
+ static const struct cmd_control ddr3_cmd_ctrl_data = {
+ 	.cmd0csratio = MT41J128MJT125_RATIO,
+ 	.cmd0iclkout = MT41J128MJT125_INVERT_CLKOUT,
+@@ -195,6 +206,17 @@ static const struct cmd_control ddr3_icev2_cmd_ctrl_data = {
+ 	.cmd2iclkout = MT41J128MJT125_INVERT_CLKOUT_400MHz,
+ };
+ 
++static const struct cmd_control ddr3_nimbus_cmd_ctrl_data = {
++	.cmd0csratio = AS4C256M16D3LB12BCN_RATIO,
++	.cmd0iclkout = AS4C256M16D3LB12BCN_INVERT_CLKOUT,
++
++	.cmd1csratio = AS4C256M16D3LB12BCN_RATIO,
++	.cmd1iclkout = AS4C256M16D3LB12BCN_INVERT_CLKOUT,
++
++	.cmd2csratio = AS4C256M16D3LB12BCN_RATIO,
++	.cmd2iclkout = AS4C256M16D3LB12BCN_INVERT_CLKOUT,
++};
++
+ static struct emif_regs ddr3_emif_reg_data = {
+ 	.sdram_config = MT41J128MJT125_EMIF_SDCFG,
+ 	.ref_ctrl = MT41J128MJT125_EMIF_SDREF,
+@@ -229,6 +251,18 @@ static struct emif_regs ddr3_evm_emif_reg_data = {
+ 				PHY_EN_DYN_PWRDN,
+ };
+ 
++static struct emif_regs ddr3_nimbus_emif_reg_data = {
++	.sdram_config = AS4C256M16D3LB12BCN_EMIF_SDCFG,
++	.ref_ctrl = AS4C256M16D3LB12BCN_EMIF_SDREF,
++	.sdram_tim1 = AS4C256M16D3LB12BCN_EMIF_TIM1,
++	.sdram_tim2 = AS4C256M16D3LB12BCN_EMIF_TIM2,
++	.sdram_tim3 = AS4C256M16D3LB12BCN_EMIF_TIM3,
++	.ocp_config = EMIF_OCP_CONFIG_AM335X_EVM,
++	.zq_config = AS4C256M16D3LB12BCN_ZQ_CFG,
++	.emif_ddr_phy_ctlr_1 = AS4C256M16D3LB12BCN_EMIF_READ_LATENCY |
++				PHY_EN_DYN_PWRDN,
++};
++
+ static struct emif_regs ddr3_icev2_emif_reg_data = {
+ 	.sdram_config = MT41J128MJT125_EMIF_SDCFG_400MHz,
+ 	.ref_ctrl = MT41J128MJT125_EMIF_SDREF_400MHz,
+@@ -268,6 +302,8 @@ const struct dpll_params *get_dpll_ddr_params(void)
+ 		return &dpll_ddr3_400MHz[ind];
+ 	else if (board_is_evm_15_or_later())
+ 		return &dpll_ddr3_303MHz[ind];
++	else if (board_is_nimbus())
++		return &dpll_ddr3_303MHz[ind];
+ 	else
+ 		return &dpll_ddr2_266MHz[ind];
+ }
+@@ -523,6 +559,14 @@ const struct ctrl_ioregs ioregs = {
+ 	.dt1ioctl		= MT47H128M16RT25E_IOCTRL_VALUE,
+ };
+ 
++const struct ctrl_ioregs ioregs_nimbus = {
++	.cm0ioctl		= AS4C256M16D3LB12BCN_IOCTRL_VALUE,
++	.cm1ioctl		= AS4C256M16D3LB12BCN_IOCTRL_VALUE,
++	.cm2ioctl		= AS4C256M16D3LB12BCN_IOCTRL_VALUE,
++	.dt0ioctl		= AS4C256M16D3LB12BCN_IOCTRL_VALUE,
++	.dt1ioctl		= AS4C256M16D3LB12BCN_IOCTRL_VALUE,
++};
++
+ void sdram_init(void)
+ {
+ 	if (board_is_evm_sk()) {
+@@ -557,6 +601,9 @@ void sdram_init(void)
+ 	else if (board_is_gp_evm())
+ 		config_ddr(266, &ioregs, &ddr2_data,
+ 			   &ddr2_cmd_ctrl_data, &ddr2_evm_emif_reg_data, 0);
++	else if (board_is_nimbus())
++		config_ddr(303, &ioregs_nimbus, &ddr3_nimbus_data,
++			   &ddr3_nimbus_cmd_ctrl_data, &ddr3_nimbus_emif_reg_data, 0);
+ 	else
+ 		config_ddr(266, &ioregs, &ddr2_data,
+ 			   &ddr2_cmd_ctrl_data, &ddr2_emif_reg_data, 0);
+@@ -616,6 +663,16 @@ int board_init(void)
+ 	hw_watchdog_init();
+ #endif
+ 
++/* Configure NIMBUS GPIO */
++if (board_is_nimbus()) {
++	gpio_request(GPIO_LD2, "gpio_ld2");
++	gpio_request(GPIO_LD3, "gpio_ld3");
++	
++	/* Turn on both LEDs during bootloader phase */
++	gpio_direction_output(GPIO_LD2, 1);
++	gpio_direction_output(GPIO_LD3, 1);
++}
++
+ 	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
+ #if defined(CONFIG_NOR) || defined(CONFIG_NAND)
+ 	gpmc_init();
+@@ -724,6 +781,10 @@ int board_late_init(void)
+ 
+ 	if (board_is_bbg1())
+ 		name = "BBG1";
++	
++	if (board_is_nimbus())
++		name = "A335NIMBUS";
++
+ 	set_board_info_env(name);
+ 
+ 	/*
+@@ -791,7 +852,7 @@ static struct cpsw_slave_data cpsw_slaves[] = {
+ 	{
+ 		.slave_reg_ofs	= 0x308,
+ 		.sliver_reg_ofs	= 0xdc0,
+-		.phy_addr	= 1,
++		.phy_addr	= 7,
+ 	},
+ };
+ 
+@@ -801,7 +862,7 @@ static struct cpsw_platform_data cpsw_data = {
+ 	.mdio_div		= 0xff,
+ 	.channels		= 8,
+ 	.cpdma_reg_ofs		= 0x800,
+-	.slaves			= 1,
++	.slaves			= 2,
+ 	.slave_data		= cpsw_slaves,
+ 	.ale_reg_ofs		= 0xd00,
+ 	.ale_entries		= 1024,
+@@ -811,6 +872,7 @@ static struct cpsw_platform_data cpsw_data = {
+ 	.mac_control		= (1 << 5),
+ 	.control		= cpsw_control,
+ 	.host_port_num		= 0,
++	.active_slave		= 1,
+ 	.version		= CPSW_CTRL_VERSION_2,
+ };
+ #endif
+@@ -839,6 +901,7 @@ int board_eth_init(bd_t *bis)
+ 	(!defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_USBETH_SUPPORT))
+ 	uint8_t mac_addr[6];
+ 	uint32_t mac_hi, mac_lo;
++	uint16_t reg;
+ 
+ 	/*
+ 	 * use efuse mac address for USB ethernet as we know that
+@@ -870,6 +933,10 @@ int board_eth_init(bd_t *bis)
+ 		cpsw_slaves[1].phy_if = PHY_INTERFACE_MODE_RMII;
+ 		cpsw_slaves[0].phy_addr = 1;
+ 		cpsw_slaves[1].phy_addr = 3;
++	} else if (board_is_nimbus()) {
++		writel(RGMII_MODE_ENABLE, &cdev->miisel);
++		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
++				PHY_INTERFACE_MODE_RGMII;		
+ 	} else {
+ 		writel((RGMII_MODE_ENABLE | RGMII_INT_DELAY), &cdev->miisel);
+ 		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
+@@ -904,6 +971,31 @@ int board_eth_init(bd_t *bis)
+ 		miiphy_write(devname, 0x0, AR8051_PHY_DEBUG_DATA_REG,
+ 				AR8051_RGMII_TX_CLK_DLY);
+ 	}
++
++	if (board_is_nimbus()) {
++		const char *devname;
++		devname = miiphy_get_current_dev();
++
++		// delay TX and TX clock lines
++		miiphy_write(devname, 0x0, 0xd, 0x2);
++		miiphy_write(devname, 0x0, 0xe, 0x8);
++		miiphy_write(devname, 0x0, 0xd, 0x4002);
++		miiphy_write(devname, 0x0, 0xe, 0x3ff);
++
++		// disable 1000 Mbps
++		miiphy_read(devname, 0x0, 0x0, &reg);
++		reg &= 0xFFBF;
++		miiphy_write(devname, 0x0, 0x0, reg);
++
++		miiphy_read(devname, 0x0, 0x9, &reg);
++		reg &= 0xFCFF;
++		miiphy_write(devname, 0x0, 0x9, reg);
++
++		miiphy_read(devname, 0x0, 0x0, &reg);
++		reg |= 0x0200;
++		miiphy_write(devname, 0x0, 0x0, reg);
++	}
++
+ #endif
+ #if defined(CONFIG_USB_ETHER) && \
+ 	(!defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_USBETH_SUPPORT))
+diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
+index e13fcff02a..d279d22d1d 100644
+--- a/board/ti/am335x/board.h
++++ b/board/ti/am335x/board.h
+@@ -70,6 +70,11 @@ static inline int board_is_icev2(void)
+ 	return board_ti_is("A335_ICE") && !strncmp("2", board_ti_get_rev(), 1);
+ }
+ 
++static inline int board_is_nimbus(void)
++{
++	return 1;
++}
++
+ /*
+  * We have three pin mux functions that must exist.  We must be able to enable
+  * uart0, for initial output and i2c0 to read the main EEPROM.  We then have a
+diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
+index ad85b3a19a..a4586a78db 100644
+--- a/board/ti/am335x/mux.c
++++ b/board/ti/am335x/mux.c
+@@ -158,6 +158,28 @@ static struct module_pin_mux rgmii1_pin_mux[] = {
+ 	{-1},
+ };
+ 
++static struct module_pin_mux rgmii2_pin_mux[] = {
++	{OFFSET(gpmc_a0), MODE(2)},			/* RGMII1_TCTL */
++	{OFFSET(gpmc_a1), MODE(2) | RXACTIVE},		/* RGMII1_RCTL */
++	{OFFSET(gpmc_a2), MODE(2)},			/* RGMII1_TD3 */
++	{OFFSET(gpmc_a3), MODE(2)},			/* RGMII1_TD2 */
++	{OFFSET(gpmc_a4), MODE(2)},			/* RGMII1_TD1 */
++	{OFFSET(gpmc_a5), MODE(2)},			/* RGMII1_TD0 */
++	{OFFSET(gpmc_a6), MODE(2)},			/* RGMII1_TCLK */
++	{OFFSET(gpmc_a7), MODE(2) | RXACTIVE},		/* RGMII1_RCLK */
++	{OFFSET(gpmc_a8), MODE(2) | RXACTIVE},		/* RGMII1_RD3 */
++	{OFFSET(gpmc_a9), MODE(2) | RXACTIVE},		/* RGMII1_RD2 */
++	{OFFSET(gpmc_a10), MODE(2) | RXACTIVE},		/* RGMII1_RD1 */
++	{OFFSET(gpmc_a11), MODE(2) | RXACTIVE},		/* RGMII1_RD0 */
++	{-1},
++};
++
++static struct module_pin_mux mdio_pin_mux[] = {
++	{OFFSET(mdio_data), MODE(0) | RXACTIVE | PULLUP_EN},/* MDIO_DATA */
++	{OFFSET(mdio_clk), MODE(0) | PULLUP_EN},	/* MDIO_CLK */
++	{-1},
++};
++
+ static struct module_pin_mux mii1_pin_mux[] = {
+ 	{OFFSET(mii1_rxerr), MODE(0) | RXACTIVE},	/* MII1_RXERR */
+ 	{OFFSET(mii1_txen), MODE(0)},			/* MII1_TXEN */
+@@ -262,6 +284,13 @@ static struct module_pin_mux uart3_icev2_pin_mux[] = {
+ 	{-1},
+ };
+ 
++static struct module_pin_mux cell_nimbus_pin_mux[] = {
++	{OFFSET(gpmc_wait0), (MODE(7) | PULLDOWN_EN | PULLUDEN | RXACTIVE)},	/* GPIO0_30 */
++	{OFFSET(gpmc_wpn), (MODE(7) | PULLDOWN_EN | PULLUDEN | RXACTIVE)},		/* GPIO0_31 */
++	{OFFSET(gpmc_be1n), (MODE(7) | PULLDOWN_EN | PULLUDEN | RXACTIVE)},		/* GPIO1_28 */	
++	{-1},
++};
++
+ #if defined(CONFIG_NOR_BOOT)
+ void enable_norboot_pin_mux(void)
+ {
+@@ -396,6 +425,12 @@ void enable_board_pin_mux(void)
+ 		configure_module_pin_mux(uart3_icev2_pin_mux);
+ 		configure_module_pin_mux(rmii1_pin_mux);
+ 		configure_module_pin_mux(spi0_pin_mux);
++	} else if (board_is_nimbus()) {
++		configure_module_pin_mux(mmc0_pin_mux);
++		configure_module_pin_mux(mmc1_pin_mux);
++		configure_module_pin_mux(mdio_pin_mux);
++		configure_module_pin_mux(rgmii2_pin_mux);
++		configure_module_pin_mux(cell_nimbus_pin_mux);		
+ 	} else {
+ 		/* Unknown board. We might still be able to boot. */
+ 		puts("Bad EEPROM or unknown board, cannot configure pinmux.");
+-- 
+2.17.1
+
