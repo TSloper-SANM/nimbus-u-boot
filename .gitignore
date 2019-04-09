@@ -62,7 +62,7 @@ patches-*
 .stgit-edit.txt
 
 # quilt's files
-patches
+# patches
 series
 
 # gdb files
